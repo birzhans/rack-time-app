@@ -5,8 +5,7 @@ class App
     @request = Rack::Request.new(env)
 
     if valid_request?(@request)
-      time = TimeFormatter.new(@request.params)
-      response(time.status, time.message)
+      process_response
     else
       response(404, "Invalid path or method")
     end
@@ -15,11 +14,22 @@ class App
   private
 
   def response(status, message)
-    [
+    Rack::Response.new(
       status,
       { 'Content-Type' => 'text/plain' },
-      ["#{message}\n"]
-    ]
+      "#{message}\n"
+    )
+  end
+
+  def process_response
+    time = TimeFormatter.new(@request.params)
+    time.call
+
+    if time.success?
+      response(200, time.time_string)
+    else
+      response(400, "Unknown formats: #{time.invalid_string}")
+    end
   end
 
   def valid_request?(request)
